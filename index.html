@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Losowy Champ</title>
+<style>
+  :root { --bg:#0b1118; --panel:#131c27; --line:#243244; --gold:#c8aa6e; --text:#e6e9ee; --muted:#8a97a8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui,Segoe UI,Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; color:var(--gold); letter-spacing:.5px; }
+  .sub { color:var(--muted); margin:0 0 20px; font-size:.9rem; }
+  .roles { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:14px; }
+  .roles button { padding:12px 4px; background:var(--panel); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; cursor:pointer; font-weight:600; }
+  .roles button:hover { border-color:var(--gold); }
+  .roles button.active { background:var(--gold); color:#111; border-color:var(--gold); }
+  .roles small { display:block; font-weight:400; opacity:.7; font-size:.7rem; }
+  .opts { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; color:var(--muted); font-size:.9rem; }
+  .opts label { cursor:pointer; user-select:none; }
+  .actions { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+  .actions button { flex:1; min-width:140px; padding:14px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel); color:var(--text); font-size:1rem; cursor:pointer; }
+  .actions button.primary { background:var(--gold); color:#111; border-color:var(--gold); font-weight:700; }
+  .actions button:disabled { opacity:.4; cursor:not-allowed; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  .champ { display:flex; gap:16px; align-items:center; }
+  .champ img { width:88px; height:88px; border-radius:12px; border:2px solid var(--gold); }
+  .champ h2 { margin:0; font-size:1.8rem; }
+  .meta { color:var(--muted); font-size:.85rem; }
+  .meta a { color:var(--gold); }
+  .itemrow { display:flex; gap:16px; align-items:flex-start; margin-top:20px; }
+  .items { flex:1; display:grid; grid-template-columns:repeat(auto-fit,minmax(78px,1fr)); gap:10px; }
+  .bootbox { width:92px; flex:none; border-left:1px solid var(--line); padding-left:16px; }
+  .bootbox .lbl { text-align:center; font-size:.7rem; color:var(--gold); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; }
+  .item { text-align:center; font-size:.7rem; color:var(--muted); }
+  .item img { width:100%; max-width:72px; border-radius:8px; border:1px solid var(--line); display:block; margin:0 auto 4px; }
+  .item.boots img { border-color:var(--gold); }
+  .opts input[type=range] { vertical-align:middle; width:140px; accent-color:var(--gold); }
+  .opts select { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; font-size:.9rem; }
+  .opts b { color:var(--text); display:inline-block; min-width:3.2em; }
+  .note { color:var(--muted); font-size:.85rem; margin:-4px 0 16px; }
+  .swapbox { display:flex; align-items:center; gap:14px; margin-top:16px; padding-top:14px; border-top:1px dashed var(--line); color:var(--muted); font-size:.85rem; }
+  .swapbox .item { width:92px; flex:none; }
+  .swapbox b { color:var(--text); font-weight:600; }
+  .item .cost { color:var(--gold); }
+  .item .st { color:var(--muted); }
+  .item .wr-good { color:#5fcf80; font-weight:600; }
+  .item .wr-bad { color:#e5635f; font-weight:600; }
+  .item .pr { color:#e6c34a; font-weight:600; }
+  .facts { margin-top:20px; border-top:1px solid var(--line); padding-top:14px; }
+  .facts h3 { margin:0 0 8px; font-size:.95rem; color:var(--gold); }
+  .facts ul { margin:0; padding-left:18px; color:var(--muted); font-size:.9rem; }
+  .facts li { margin-bottom:4px; }
+  .facts b { color:var(--text); font-weight:600; }
+  .hist { margin-top:20px; color:var(--muted); font-size:.85rem; }
+  .hist b { color:var(--text); font-weight:500; }
+  .err { background:#3a1a1a; border:1px solid #7a2a2a; padding:16px; border-radius:8px; }
+  @media (max-width:520px){ .itemrow{ flex-direction:column; } .bootbox{ border-left:0; border-top:1px solid var(--line); padding:10px 0 0; width:100%; } .champ img{width:64px;height:64px;} .champ h2{font-size:1.4rem;} }
+</style>
+</head>
+<body>
+<main>
+  <h1>Losowy Champ</h1>
+  <p class="sub" id="sub"></p>
+
+  <div class="roles" id="roles"></div>
+
+  <div class="opts">
+    <label title="Itemy rzadsze niż ten próg nie będą losowane (przy następnym losowaniu)">
+      Min. pick rate itemu:
+      <input type="range" id="minPr" min="0" max="5" step="0.1" value="0">
+      <b id="minPrVal">0%</b>
+    </label>
+    <label>Kolejność:
+      <select id="sortBy">
+        <option value="random">Losowa</option>
+        <option value="time-asc">Czas zakupu: od najwcześniejszego</option>
+        <option value="time-desc">Czas zakupu: od najpóźniejszego</option>
+        <option value="gold-asc">Cena: od najtańszego</option>
+        <option value="gold-desc">Cena: od najdroższego</option>
+        <option value="pr-desc">Pick rate: od największego</option>
+        <option value="pr-asc">Pick rate: od najmniejszego</option>
+        <option value="wr-desc">Winrate: od największego</option>
+        <option value="wr-asc">Winrate: od najmniejszego</option>
+      </select>
+    </label>
+  </div>
+  <div class="note" id="roleNote">Wybierz rolę, aby zacząć.</div>
+
+  <div class="actions">
+    <button class="primary" id="rollAll" disabled>🎲 Losuj championa + itemy</button>
+    <button id="rollItems" disabled>🛒 Przelosuj same itemy</button>
+  </div>
+
+  <div id="out"></div>
+  <div class="hist" id="hist"></div>
+</main>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  const D = window.LOL_DATA;
+  const out = document.getElementById('out');
+
+  if (!D) {
+    out.innerHTML = '<div class="err"><b>Brak pliku data.js.</b><br>Uruchom <code>node scrape.mjs</code> w tym folderze, ' +
+      'poczekaj aż skończy, i odśwież stronę.</div>';
+    return;
+  }
+
+  const ROLES = [
+    ['top', 'Top', 'TOP'], ['jungle', 'Jungle', 'JNG'], ['middle', 'Mid', 'MID'],
+    ['bottom', 'Bot / ADC', 'BOT'], ['support', 'Support', 'SUP'],
+  ];
+  const IMG = 'https://ddragon.leagueoflegends.com/cdn/' + D.ddragonVersion + '/img/';
+
+  const $ = (id) => document.getElementById(id);
+  const rolesEl = $('roles'), rollAll = $('rollAll'), rollItems = $('rollItems');
+  let role = null, current = null; // current = { champ, laneData, items:[ids] }
+  const history = [];
+
+  const date = D.generated ? new Date(D.generated).toLocaleDateString('pl-PL') : '?';
+  $('sub').textContent = 'Dane z Lolalytics (Emerald+, Solo/Duo)' + (D.patch ? ', patch ' + D.patch : '') +
+    ', zebrane ' + date + '. Min. ' + D.minGames + ' gier na rolę.';
+
+  function pool(r) {
+    return Object.values(D.champions).filter((c) => c.lanes[r]);
+  }
+
+  ROLES.forEach(([key, label, short]) => {
+    const n = pool(key).length;
+    const b = document.createElement('button');
+    b.innerHTML = label + '<small>' + n + ' champów</small>';
+    b.disabled = n === 0;
+    b.onclick = () => {
+      role = key;
+      [...rolesEl.children].forEach((x) => x.classList.remove('active'));
+      b.classList.add('active');
+      rollAll.disabled = false;
+      rollItems.disabled = true;
+      $('roleNote').textContent = key === 'bottom'
+        ? 'Bot / ADC: 6 itemów + buty (misja ADC przenosi buty do osobnego slotu).'
+        : '5 itemów + buty.';
+      rollChampion();
+    };
+    rolesEl.appendChild(b);
+  });
+
+  function randInt(n) { return Math.floor(Math.random() * n); }
+
+  function pickChampion(r) {
+    const list = pool(r);
+    if (!list.length) return null;
+    return list[randInt(list.length)];
+  }
+
+  function sample(arr, k) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = randInt(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    return a.slice(0, k);
+  }
+
+  function pickItems(lane) {
+    const minPr = parseFloat($('minPr').value) || 0;
+    const st = lane.itemStats || {};
+    // item bez statystyk (np. awaryjny tryb skryptu) nie jest odrzucany przez próg
+    const okPr = (id) => !st[id] || st[id].pr >= minPr;
+
+    // buty: najpierw z danych Lolalytics dla tego championa; jeśli ich nie ma, losujemy z puli wszystkich butów
+    const fromLolalytics = lane.boots.length > 0;
+    const bootPool = fromLolalytics ? lane.boots : (D.allBoots || []);
+    let bootOk = bootPool.filter(okPr);
+    if (!bootOk.length && bootPool.length) {
+      // próg za wysoki dla każdych butów: bierzemy najpopularniejsze, bo buty są zawsze
+      bootOk = [bootPool.slice().sort((a, b) => ((st[b] && st[b].pr) || 0) - ((st[a] && st[a].pr) || 0))[0]];
+    }
+    const boot = bootOk.length ? [bootOk[randInt(bootOk.length)]] : [];
+
+    // bot/ADC (misja) ma 6 itemów + buty, reszta ról 5 + buty
+    const nMain = role === 'bottom' ? 6 : 5;
+    const itemPool = lane.items.filter(okPr);
+    const rest = sample(itemPool, nMain);
+
+    // opcjonalnie: item "za buty" w bardzo późnej fazie gry, losowany spośród najpóźniej kupowanych, których nie mamy
+    let swap = null;
+    const taken = new Set(rest);
+    const cand = itemPool.filter((id) => !taken.has(id));
+    if (boot.length && cand.length) {
+      const byTime = cand.slice().sort((a, b) => ((st[b] && st[b].time) || 0) - ((st[a] && st[a].time) || 0));
+      const top = byTime.slice(0, Math.max(3, Math.ceil(byTime.length * 0.4)));
+      swap = top[randInt(top.length)];
+    }
+    return {
+      boot, rest, swap, nMain, minPr,
+      poolSize: itemPool.length, bootPoolSize: bootOk.length,
+      bootFallback: boot.length > 0 && !fromLolalytics,
+    };
+  }
+
+  // sortowanie wylosowanych itemów (nie rusza butów); "random" zostawia kolejność losowania
+  function sortedRest(ids, laneData) {
+    const mode = $('sortBy').value;
+    if (mode === 'random') return ids;
+    const st = laneData.itemStats || {};
+    const val = {
+      time: (id) => (st[id] && st[id].time != null ? st[id].time : null),
+      gold: (id) => (D.itemCost && D.itemCost[id] != null ? D.itemCost[id] : null),
+      pr: (id) => (st[id] ? st[id].pr : null),
+      wr: (id) => (st[id] ? st[id].wr : null),
+    }[mode.split('-')[0]];
+    const dir = mode.endsWith('desc') ? -1 : 1;
+    return ids.slice().sort((a, b) => {
+      const x = val(a), y = val(b);
+      if (x === null && y === null) return 0;
+      if (x === null) return 1;   // brak danych zawsze na końcu
+      if (y === null) return -1;
+      return (x - y) * dir;
+    });
+  }
+
+  function rollChampion() {
+    const champ = pickChampion(role);
+    if (!champ) return;
+    const laneData = champ.lanes[role];
+    current = { champ, laneData, items: pickItems(laneData) };
+    history.unshift(champ.name);
+    render();
+    rollItems.disabled = false;
+  }
+
+  function rollItemsOnly() {
+    if (!current) return;
+    current.items = pickItems(current.laneData);
+    render();
+  }
+
+  const fmt = (n) => Math.round(n).toLocaleString('pl-PL');
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+  function itemHtml(id, isBoots, laneData) {
+    const name = D.items[id] || id;
+    const cost = D.itemCost && D.itemCost[id];
+    // statystyki pojedynczego itemu (jeśli skrypt je zebrał): { wr, pr, games }
+    const s = laneData.itemStats && laneData.itemStats[id];
+    const tip = esc(name) + (s ? ' — ' + fmt(s.games) + ' gier' + (s.time ? ', kupowany średnio ok. ' + Math.round(s.time) + ' min' : '') : '');
+    return '<div class="item' + (isBoots ? ' boots' : '') + '" title="' + tip + '">' +
+      '<img src="' + IMG + 'item/' + id + '.png" alt="" loading="lazy">' + esc(name) +
+      (cost ? '<div class="cost">' + fmt(cost) + ' g</div>' : '') +
+      (s ? '<div class="st">' +
+        '<div class="' + (s.wr >= 50 ? 'wr-good' : 'wr-bad') + '">WR ' + s.wr + '%</div>' +
+        '<div class="pr">PR ' + s.pr + '%</div>' +
+        (s.time != null ? '<div>⏱ ~' + Math.round(s.time) + ' min</div>' : '') + '</div>' : '') + '</div>';
+  }
+
+  // ---------- ciekawostki liczone z naszych danych ----------
+  function buildFacts(champ, laneData, items) {
+    const facts = [];
+    const list = pool(role).sort((a, b) => b.lanes[role].games - a.lanes[role].games);
+    const roleName = ROLES.find((r) => r[0] === role)[1];
+    const rank = list.findIndex((c) => c.name === champ.name) + 1;
+    const totalGames = list.reduce((s, c) => s + c.lanes[role].games, 0);
+    const share = (laneData.games / totalGames) * 100;
+
+    facts.push('Jest <b>#' + rank + '</b> z ' + list.length + ' najczęściej granych championów na roli ' + roleName +
+      ' (' + share.toFixed(1).replace('.', ',') + '% wszystkich gier tej roli w naszej puli).');
+
+    const withWr = list.filter((c) => c.lanes[role].winrate);
+    if (laneData.winrate && withWr.length > 3) {
+      const g = withWr.reduce((s, c) => s + c.lanes[role].games, 0);
+      const avg = withWr.reduce((s, c) => s + c.lanes[role].winrate * c.lanes[role].games, 0) / g;
+      const diff = laneData.winrate - avg;
+      const wrRank = withWr.sort((a, b) => b.lanes[role].winrate - a.lanes[role].winrate)
+        .findIndex((c) => c.name === champ.name) + 1;
+      facts.push('Winrate <b>' + laneData.winrate + '%</b> to ' + (diff >= 0 ? '+' : '') + diff.toFixed(1).replace('.', ',') +
+        ' pkt względem średniej roli (' + avg.toFixed(1).replace('.', ',') + '%). Miejsce <b>#' + wrRank + '</b> z ' + withWr.length +
+        ' pod względem winrate.');
+    }
+
+    if (typeof laneData.lanePct === 'number') {
+      if (laneData.lanePct < 10) facts.push('Tylko <b>' + laneData.lanePct + '%</b> gier tego championa to ' + roleName + ' — to zdecydowanie off-meta pick!');
+      else if (laneData.lanePct > 90) facts.push(roleName + ' to jego domowa rola: <b>' + laneData.lanePct + '%</b> wszystkich jego gier.');
+      else facts.push('Na ' + roleName + ' gra się nim w <b>' + laneData.lanePct + '%</b> jego meczów.');
+    }
+
+    if (laneData.tier) facts.push('Lolalytics daje mu na tej roli tier <b>' + esc(laneData.tier) + '</b>' +
+      (laneData.rank ? ' (miejsce ' + laneData.rank + '/' + laneData.rankTotal + ' wśród championów roli)' : '') + '.');
+    if (typeof laneData.banRate === 'number') facts.push('Ban rate: <b>' + String(laneData.banRate).replace('.', ',') + '%</b>' +
+      (typeof laneData.pickRate === 'number' ? ', pick rate: <b>' + String(laneData.pickRate).replace('.', ',') + '%</b>' : '') + ' (Emerald+).');
+
+    const others = Object.keys(champ.lanes).filter((r) => r !== role).map((r) => ROLES.find((x) => x[0] === r)[1]);
+    if (others.length) facts.push('W naszej puli występuje też na: <b>' + others.join(', ') + '</b>.');
+
+    if (champ.title) facts.push('Pełny tytuł: <b>' + esc(champ.name) + ', ' + esc(champ.title) + '</b>' +
+      (champ.tags && champ.tags.length ? ' (klasa: ' + champ.tags.join('/') + ')' : '') + '.');
+    if (champ.difficulty) facts.push('Trudność według Riotu: <b>' + champ.difficulty + '/10</b>' +
+      (champ.partype ? ', zasób: ' + esc(champ.partype) : '') + '.');
+
+    const all = items.rest.concat(items.boot);
+    const costs = all.map((id) => (D.itemCost && D.itemCost[id]) || 0);
+    if (costs.every((c) => c > 0) && all.length) {
+      const total = costs.reduce((a, b) => a + b, 0);
+      const maxI = all[costs.indexOf(Math.max.apply(null, costs))];
+      facts.push('Pełny build kosztuje <b>' + fmt(total) + ' g</b>. Najdroższy element: <b>' + esc(D.items[maxI]) + '</b> (' + fmt(Math.max.apply(null, costs)) + ' g).');
+    }
+    const st = laneData.itemStats || {};
+    const scored = all.filter((id) => st[id] && st[id].games >= 50).map((id) => ({ id, s: st[id] }));
+    if (scored.length >= 2) {
+      const best = scored.slice().sort((a, b) => b.s.wr - a.s.wr)[0];
+      const rare = scored.slice().sort((a, b) => a.s.pr - b.s.pr)[0];
+      facts.push('Najwyższy winrate w Twoim zestawie ma <b>' + esc(D.items[best.id]) + '</b> (' + best.s.wr + '%, ' + fmt(best.s.games) + ' gier).');
+      facts.push('Najrzadszy item w zestawie: <b>' + esc(D.items[rare.id]) + '</b> — kupuje go tylko ' + rare.s.pr + '% graczy.');
+      const timed = scored.filter((x) => x.s.time);
+      if (timed.length) {
+        const late = timed.slice().sort((a, b) => b.s.time - a.s.time)[0];
+        facts.push('<b>' + esc(D.items[late.id]) + '</b> to u graczy typowy późny zakup: średnio około ' + Math.round(late.s.time) + ' minuty gry.');
+      }
+    }
+    facts.push('Pula itemów na tej roli dla tego championa: <b>' + items.poolSize + '</b> gotowych + ' + items.bootPoolSize + ' butów' +
+      (items.minPr > 0 ? ' (po filtrze pick rate ≥ ' + items.minPr + '%)' : '') + '. ' +
+      'Szansa, że wylosujesz dokładnie taki zestaw (bez kolejności): około 1 do ' +
+      fmt(comb(items.poolSize, items.rest.length) * Math.max(1, items.bootPoolSize)) + '.');
+    return facts;
+  }
+
+  function comb(n, k) {
+    if (k > n) return 1;
+    let r = 1;
+    for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i;
+    return Math.round(r);
+  }
+
+  function randomFacts(facts, n) {
+    return sample(facts, Math.min(n, facts.length));
+  }
+
+  function render() {
+    const { champ, laneData, items } = current;
+    // ciekawostki losujemy raz na losowanie, żeby zmiana sortowania ich nie przetasowywała
+    if (!current.facts) current.facts = randomFacts(buildFacts(champ, laneData, items), 4);
+    const roleLabel = ROLES.find((r) => r[0] === role)[1];
+    const url = 'https://lolalytics.com/lol/' + champ.slug + '/build/?lane=' + role;
+    out.innerHTML =
+      '<div class="card">' +
+        '<div class="champ">' +
+          '<img src="' + IMG + 'champion/' + champ.id + '.png" alt="">' +
+          '<div><h2>' + champ.name + '</h2>' +
+          '<div class="meta">' + roleLabel + ' · ' + laneData.games.toLocaleString('pl-PL') + ' gier' +
+          (laneData.winrate ? ' · WR ' + laneData.winrate + '%' : '') +
+          ' · <a href="' + url + '" target="_blank" rel="noopener">Lolalytics ↗</a></div></div>' +
+        '</div>' +
+        '<div class="itemrow"><div class="items">' +
+          sortedRest(items.rest, laneData).map((id) => itemHtml(id, false, laneData)).join('') +
+        '</div>' +
+        (items.boot.length ? '<div class="bootbox"><div class="lbl">Buty' + (items.bootFallback ? '*' : '') + '</div>' +
+          items.boot.map((id) => itemHtml(id, true, laneData)).join('') + '</div>' : '') +
+        '</div>' +
+        (items.rest.length < items.nMain ? '<div class="meta" style="margin-top:10px;color:#e0a060">Przy progu pick rate ≥ ' + items.minPr + '% w puli jest tylko ' + items.poolSize + ' itemów, więc wylosowano ich mniej niż ' + items.nMain + '. Obniż próg.</div>' : '') +
+        (items.bootFallback ? '<div class="meta" style="margin-top:10px">* Brak butów w danych Lolalytics dla tego championa, więc są losowe spośród wszystkich.</div>' : '') +
+        (items.swap ? '<div class="swapbox">' + itemHtml(items.swap, false, laneData) +
+          '<div>💰 <b>Późna faza gry</b>: jeśli masz full build i dużo złota, możesz sprzedać buty i kupić zamiast nich ten item.</div></div>' : '') +
+        '<div class="facts"><h3>🧠 Ciekawostki</h3><ul>' +
+          current.facts.map((f) => '<li>' + f + '</li>').join('') +
+        '</ul></div>' +
+      '</div>';
+    $('hist').innerHTML = history.length > 1 ? 'Wcześniej: <b>' + history.slice(1, 8).join('</b>, <b>') + '</b>' : '';
+  }
+
+  rollAll.onclick = rollChampion;
+  rollItems.onclick = rollItemsOnly;
+  // slider działa przy następnym losowaniu, sortowanie przestawia aktualny zestaw od razu
+  $('minPr').oninput = () => { $('minPrVal').textContent = $('minPr').value + '%'; };
+  $('sortBy').onchange = () => { if (current) render(); };
+})();
+</script>
+</body>
+</html>
