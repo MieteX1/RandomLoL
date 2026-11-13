@@ -20,6 +20,9 @@ dla danego championa na danej roli (Emerald+, Solo/Duo).
     node scrape.mjs --only Jinx,Ashe,Zeri    # szybki test na kilku championach
     node scrape.mjs --min-games 1000          # bardziej "poważne" picki
     node scrape.mjs --min-lane-pct 5          # champion musi grać tę rolę w >=5% gier
+    node scrape.mjs --min-item-pct 0.3        # item musi być w >=0,3% gier championa na roli
+    node scrape.mjs --min-start-pct 0.5       # zestaw startowy musi być grany w >=0,5% gier
+    node scrape.mjs --only Jinx --dump        # zapisuje surowy HTML strony (diagnostyka)
     node scrape.mjs --delay 800               # wolniej, ostrożniej
 
 ## Jak to działa
@@ -27,7 +30,11 @@ dla danego championa na danej roli (Emerald+, Solo/Duo).
 - Lista championów i przedmiotów (nazwy, ikony, co jest "gotowym" itemem) pochodzi z Riot Data Dragon.
 - Dla każdego championa skrypt otwiera stronę buildu na Lolalytics, odczytuje, na jakich rolach jest grany,
   a potem dla każdej roli powyżej progów zbiera listę itemów występujących w jego statystykach.
-- Strona losuje championa z roli i 5 itemów + 1 buty z tej puli.
+- Strona losuje championa z roli i 5 itemów + buty (ADC: 6 itemów + buty) z tej puli.
+- Itemy startowe pochodzą z sekcji Starting Item Sets (losowo spośród popularnych zestawów championa).
+- Suwak „Min. pick rate championa” ogranicza losowanie do postaci bardziej popularnych na wybranej roli,
+  suwak „Min. pick rate itemu” odrzuca rzadkie itemy. Oba działają przy następnym losowaniu.
+- Poza botem, w ramce „Późna faza gry”, losowany jest item w zamian za buty.
 
 ## Jeśli coś nie działa
 

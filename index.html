@@ -17,8 +17,11 @@
   .roles button:hover { border-color:var(--gold); }
   .roles button.active { background:var(--gold); color:#111; border-color:var(--gold); }
   .roles small { display:block; font-weight:400; opacity:.7; font-size:.7rem; }
-  .opts { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; color:var(--muted); font-size:.9rem; }
-  .opts label { cursor:pointer; user-select:none; }
+  /* opcje w siatce 3-kolumnowej (opis | kontrolka | wartość), dzięki czemu wszystko jest w równych rzędach */
+  .opts { display:grid; grid-template-columns:auto minmax(90px,240px) auto; justify-content:start; align-items:center; gap:10px 14px; margin-bottom:16px; color:var(--muted); font-size:.9rem; }
+  .opts .val { white-space:nowrap; }
+  .opts .cnt { color:var(--muted); font-size:.8rem; margin-left:6px; }
+  .opts select { grid-column:2 / span 2; justify-self:start; max-width:100%; }
   .actions { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
   .actions button { flex:1; min-width:140px; padding:14px; border-radius:8px; border:1px solid var(--line);
     background:var(--panel); color:var(--text); font-size:1rem; cursor:pointer; }
@@ -33,11 +36,22 @@
   .itemrow { display:flex; gap:16px; align-items:flex-start; margin-top:20px; }
   .items { flex:1; display:grid; grid-template-columns:repeat(auto-fit,minmax(78px,1fr)); gap:10px; }
   .bootbox { width:92px; flex:none; border-left:1px solid var(--line); padding-left:16px; }
-  .bootbox .lbl { text-align:center; font-size:.7rem; color:var(--gold); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; }
+  /* napis "Buty" ma stałą wysokość, a lista itemów dostaje identyczny odstęp u góry,
+     dzięki czemu ikony butów leżą dokładnie na wysokości ikon pozostałych itemów */
+  .bootbox .lbl { height:16px; line-height:16px; text-align:center; font-size:.7rem; color:var(--gold); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; }
+  .items { padding-top:22px; }
+  .startbox { display:flex; align-items:center; gap:14px; margin-top:20px; padding:12px 14px; background:rgba(200,170,110,.06); border:1px solid var(--line); border-radius:10px; }
+  .startbox .lbl { font-size:.7rem; color:var(--gold); text-transform:uppercase; letter-spacing:1px; width:64px; flex:none; }
+  .sitems { display:flex; gap:10px; flex:none; }
+  .sitem { position:relative; width:44px; }
+  .sitem img { width:44px; height:44px; border-radius:8px; border:1px solid var(--line); display:block; }
+  .sitem .n { position:absolute; right:-4px; bottom:-4px; background:var(--gold); color:#111; font-size:.7rem; font-weight:700; border-radius:9px; padding:0 5px; line-height:16px; }
+  .sinfo { font-size:.85rem; color:var(--muted); min-width:0; }
+  .sinfo b { color:var(--text); font-weight:600; }
   .item { text-align:center; font-size:.7rem; color:var(--muted); }
   .item img { width:100%; max-width:72px; border-radius:8px; border:1px solid var(--line); display:block; margin:0 auto 4px; }
   .item.boots img { border-color:var(--gold); }
-  .opts input[type=range] { vertical-align:middle; width:140px; accent-color:var(--gold); }
+  .opts input[type=range] { width:100%; margin:0; accent-color:var(--gold); }
   .opts select { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; font-size:.9rem; }
   .opts b { color:var(--text); display:inline-block; min-width:3.2em; }
   .note { color:var(--muted); font-size:.85rem; margin:-4px 0 16px; }
@@ -46,9 +60,9 @@
   .swapbox b { color:var(--text); font-weight:600; }
   .item .cost { color:var(--gold); }
   .item .st { color:var(--muted); }
-  .item .wr-good { color:#5fcf80; font-weight:600; }
-  .item .wr-bad { color:#e5635f; font-weight:600; }
-  .item .pr { color:#e6c34a; font-weight:600; }
+  .wr-good { color:#5fcf80; font-weight:600; }
+  .wr-bad { color:#e5635f; font-weight:600; }
+  .pr { color:#e6c34a; font-weight:600; }
   .facts { margin-top:20px; border-top:1px solid var(--line); padding-top:14px; }
   .facts h3 { margin:0 0 8px; font-size:.95rem; color:var(--gold); }
   .facts ul { margin:0; padding-left:18px; color:var(--muted); font-size:.9rem; }
@@ -57,7 +71,12 @@
   .hist { margin-top:20px; color:var(--muted); font-size:.85rem; }
   .hist b { color:var(--text); font-weight:500; }
   .err { background:#3a1a1a; border:1px solid #7a2a2a; padding:16px; border-radius:8px; }
-  @media (max-width:520px){ .itemrow{ flex-direction:column; } .bootbox{ border-left:0; border-top:1px solid var(--line); padding:10px 0 0; width:100%; } .champ img{width:64px;height:64px;} .champ h2{font-size:1.4rem;} }
+  @media (max-width:520px){
+    .opts { grid-template-columns:1fr auto; justify-content:stretch; gap:6px 12px; }
+    .opts > span:not(.val) { grid-column:1 / -1; margin-top:6px; }
+    .opts select { grid-column:1 / -1; justify-self:stretch; }
+  }
+  @media (max-width:520px){ .itemrow{ align-items:stretch; } .items{ padding-top:0; } .startbox{ flex-wrap:wrap; } .itemrow{ flex-direction:column; } .bootbox{ border-left:0; border-top:1px solid var(--line); padding:10px 0 0; width:100%; } .champ img{width:64px;height:64px;} .champ h2{font-size:1.4rem;} }
 </style>
 </head>
 <body>
@@ -68,24 +87,26 @@
   <div class="roles" id="roles"></div>
 
   <div class="opts">
-    <label title="Itemy rzadsze niż ten próg nie będą losowane (przy następnym losowaniu)">
-      Min. pick rate itemu:
-      <input type="range" id="minPr" min="0" max="5" step="0.1" value="0">
-      <b id="minPrVal">0%</b>
-    </label>
-    <label>Kolejność:
-      <select id="sortBy">
-        <option value="random">Losowa</option>
-        <option value="time-asc">Czas zakupu: od najwcześniejszego</option>
-        <option value="time-desc">Czas zakupu: od najpóźniejszego</option>
-        <option value="gold-asc">Cena: od najtańszego</option>
-        <option value="gold-desc">Cena: od najdroższego</option>
-        <option value="pr-desc">Pick rate: od największego</option>
-        <option value="pr-asc">Pick rate: od najmniejszego</option>
-        <option value="wr-desc">Winrate: od największego</option>
-        <option value="wr-asc">Winrate: od najmniejszego</option>
-      </select>
-    </label>
+    <span title="Championi rzadsi niż ten próg (na wybranej roli) nie będą losowani. Działa przy następnym losowaniu.">Min. pick rate championa:</span>
+    <input type="range" id="minChampPr" min="0" max="5" step="0.1" value="0">
+    <span class="val"><b id="minChampPrVal">0%</b><span class="cnt" id="champCnt"></span></span>
+
+    <span title="Itemy rzadsze niż ten próg nie będą losowane (przy następnym losowaniu)">Min. pick rate itemu:</span>
+    <input type="range" id="minPr" min="0" max="5" step="0.1" value="0">
+    <span class="val"><b id="minPrVal">0%</b></span>
+
+    <span>Kolejność:</span>
+    <select id="sortBy">
+      <option value="random">Losowa</option>
+      <option value="time-asc">Czas zakupu: od najwcześniejszego</option>
+      <option value="time-desc">Czas zakupu: od najpóźniejszego</option>
+      <option value="gold-asc">Cena: od najtańszego</option>
+      <option value="gold-desc">Cena: od najdroższego</option>
+      <option value="pr-desc">Pick rate: od największego</option>
+      <option value="pr-asc">Pick rate: od najmniejszego</option>
+      <option value="wr-desc">Winrate: od największego</option>
+      <option value="wr-asc">Winrate: od najmniejszego</option>
+    </select>
   </div>
   <div class="note" id="roleNote">Wybierz rolę, aby zacząć.</div>
 
@@ -125,15 +146,39 @@
   $('sub').textContent = 'Dane z Lolalytics (Emerald+, Solo/Duo)' + (D.patch ? ', patch ' + D.patch : '') +
     ', zebrane ' + date + '. Min. ' + D.minGames + ' gier na rolę.';
 
+  // pool = wszyscy championowie z danej roli (do statystyk i ciekawostek),
+  // eligible = ci, którzy przechodzą próg pick rate z suwaka (z nich losujemy)
   function pool(r) {
     return Object.values(D.champions).filter((c) => c.lanes[r]);
   }
+  const minChampPr = () => parseFloat($('minChampPr').value) || 0;
+  function eligible(r) {
+    const min = minChampPr();
+    return pool(r).filter((c) => min <= 0 || (c.lanes[r].pickRate || 0) >= min);
+  }
 
-  ROLES.forEach(([key, label, short]) => {
-    const n = pool(key).length;
+  const roleBtns = {};
+  function setRoleBtn(key, label) {
+    const all = pool(key).length, n = eligible(key).length;
+    roleBtns[key].innerHTML = label + '<small>' + (n === all ? n : n + ' z ' + all) + ' champów</small>';
+  }
+  function refreshCounts() {
+    ROLES.forEach(([key, label]) => setRoleBtn(key, label));
+    if (role) $('champCnt').textContent = eligible(role).length + ' z ' + pool(role).length + ' championów';
+  }
+  // zakres suwaka dopasowany do roli: do pick rate najpopularniejszego championa na tej roli (zaokrąglone w górę)
+  function updateChampSlider() {
+    const maxPr = Math.max(0, ...pool(role).map((c) => c.lanes[role].pickRate || 0));
+    const sl = $('minChampPr');
+    sl.max = Math.max(1, Math.ceil(maxPr));
+    if (parseFloat(sl.value) > parseFloat(sl.max)) sl.value = sl.max;
+    $('minChampPrVal').textContent = sl.value + '%';
+  }
+
+  ROLES.forEach(([key, label]) => {
     const b = document.createElement('button');
-    b.innerHTML = label + '<small>' + n + ' champów</small>';
-    b.disabled = n === 0;
+    roleBtns[key] = b;
+    b.disabled = pool(key).length === 0;
     b.onclick = () => {
       role = key;
       [...rolesEl.children].forEach((x) => x.classList.remove('active'));
@@ -143,15 +188,18 @@
       $('roleNote').textContent = key === 'bottom'
         ? 'Bot / ADC: 6 itemów + buty (misja ADC przenosi buty do osobnego slotu).'
         : '5 itemów + buty.';
+      updateChampSlider();
+      refreshCounts();
       rollChampion();
     };
     rolesEl.appendChild(b);
   });
+  refreshCounts();
 
   function randInt(n) { return Math.floor(Math.random() * n); }
 
   function pickChampion(r) {
-    const list = pool(r);
+    const list = eligible(r);
     if (!list.length) return null;
     return list[randInt(list.length)];
   }
@@ -184,16 +232,21 @@
     const rest = sample(itemPool, nMain);
 
     // opcjonalnie: item "za buty" w bardzo późnej fazie gry, losowany spośród najpóźniej kupowanych, których nie mamy
+    // (bot/ADC nie ma tej sekcji: ma 6 slotów + osobny slot na buty)
     let swap = null;
     const taken = new Set(rest);
     const cand = itemPool.filter((id) => !taken.has(id));
-    if (boot.length && cand.length) {
+    if (role !== 'bottom' && boot.length && cand.length) {
       const byTime = cand.slice().sort((a, b) => ((st[b] && st[b].time) || 0) - ((st[a] && st[a].time) || 0));
       const top = byTime.slice(0, Math.max(3, Math.ceil(byTime.length * 0.4)));
       swap = top[randInt(top.length)];
     }
+    // zestaw startowy z Lolalytics (Starting Item Sets): losowo spośród popularnych zestawów tego championa
+    const sets = lane.startSets;
+    const start = sets && sets.length ? sets[randInt(sets.length)] : null;
+
     return {
-      boot, rest, swap, nMain, minPr,
+      boot, rest, swap, start, noStartData: sets === undefined, nMain, minPr,
       poolSize: itemPool.length, bootPoolSize: bootOk.length,
       bootFallback: boot.length > 0 && !fromLolalytics,
     };
@@ -222,7 +275,13 @@
 
   function rollChampion() {
     const champ = pickChampion(role);
-    if (!champ) return;
+    if (!champ) {
+      current = null;
+      rollItems.disabled = true;
+      out.innerHTML = '<div class="err">Żaden champion na tej roli nie ma pick rate ≥ <b>' + minChampPr() +
+        '%</b>. Obniż próg championa suwakiem i losuj ponownie.</div>';
+      return;
+    }
     const laneData = champ.lanes[role];
     current = { champ, laneData, items: pickItems(laneData) };
     history.unshift(champ.name);
@@ -233,7 +292,28 @@
   function rollItemsOnly() {
     if (!current) return;
     current.items = pickItems(current.laneData);
+    current.facts = null; // ciekawostki o itemach muszą dotyczyć nowego zestawu
     render();
+  }
+
+  // zestaw startowy: ikony z licznikiem sztuk (np. 2 potki) + statystyki zestawu
+  function startHtml(items, laneData) {
+    if (items.noStartData) {
+      return '<div class="startbox"><div class="sinfo">Brak danych o itemach startowych. Uruchom ponownie <code>node scrape.mjs</code>.</div></div>';
+    }
+    const s = items.start;
+    if (!s) return '';
+    const counts = {};
+    s.ids.forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
+    const ids = Object.keys(counts);
+    const names = ids.map((id) => (counts[id] > 1 ? counts[id] + '× ' : '') + esc(D.items[id] || id));
+    return '<div class="startbox"><div class="lbl">🏁 Start</div>' +
+      '<div class="sitems">' + ids.map((id) =>
+        '<div class="sitem" title="' + esc(D.items[id] || id) + '"><img src="' + IMG + 'item/' + id + '.png" alt="" loading="lazy">' +
+        (counts[id] > 1 ? '<span class="n">×' + counts[id] + '</span>' : '') + '</div>').join('') + '</div>' +
+      '<div class="sinfo"><b>' + names.join(' + ') + '</b><br>' +
+        '<span class="' + (s.wr >= 50 ? 'wr-good' : 'wr-bad') + '">WR ' + s.wr + '%</span> · ' +
+        '<span class="pr">PR ' + s.pr + '%</span> · ' + fmt(s.games) + ' gier</div></div>';
   }
 
   const fmt = (n) => Math.round(n).toLocaleString('pl-PL');
@@ -350,6 +430,7 @@
           (laneData.winrate ? ' · WR ' + laneData.winrate + '%' : '') +
           ' · <a href="' + url + '" target="_blank" rel="noopener">Lolalytics ↗</a></div></div>' +
         '</div>' +
+        startHtml(items, laneData) +
         '<div class="itemrow"><div class="items">' +
           sortedRest(items.rest, laneData).map((id) => itemHtml(id, false, laneData)).join('') +
         '</div>' +
@@ -371,6 +452,11 @@
   rollItems.onclick = rollItemsOnly;
   // slider działa przy następnym losowaniu, sortowanie przestawia aktualny zestaw od razu
   $('minPr').oninput = () => { $('minPrVal').textContent = $('minPr').value + '%'; };
+  // suwak championa: od razu pokazuje, ilu championów przechodzi próg (losowanie dopiero po kliknięciu)
+  $('minChampPr').oninput = () => {
+    $('minChampPrVal').textContent = $('minChampPr').value + '%';
+    refreshCounts();
+  };
   $('sortBy').onchange = () => { if (current) render(); };
 })();
 </script>

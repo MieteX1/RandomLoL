@@ -4,6 +4,7 @@
 //          --min-lane-pct 2    minimum % gier championa grane na tej roli
 //          --only Jinx,Ashe    tylko wybrani championowie (do testów)
 //          --min-item-pct 0.3  minimum % gier championa na roli, w których item występuje (odcina rzadkie)
+//          --min-start-pct 0.5 minimum % gier, w których zestaw startowy jest grany (odcina rzadkie)
 //          --delay 400         przerwa między żądaniami w ms
 //          --dump              zapisuje surowy HTML stron buildów (diagnostyka)
 // Wymaga Node.js 18+ (wbudowany fetch). Zero zależności.
@@ -15,9 +16,10 @@ const opt = (name, def) => {
   const i = args.indexOf('--' + name);
   return i >= 0 ? args[i + 1] : def;
 };
-const MIN_GAMES = Number(opt('min-games', 500));
-const MIN_LANE_PCT = Number(opt('min-lane-pct', 2));
+const MIN_GAMES = Number(opt('min-games', 100));
+const MIN_LANE_PCT = Number(opt('min-lane-pct', 0.1));
 const MIN_ITEM_PCT = Number(opt('min-item-pct', 0)); // item musi wystąpić w >= tylu % gier championa na tej roli
+const MIN_START_PCT = Number(opt('min-start-pct', 0)); // zestaw startowy musi być grany w >= tylu % gier
 const DELAY = Number(opt('delay', 400));
 const DUMP = args.includes('--dump'); // zapisuje surowy HTML stron buildów do plików dump-*.html (do diagnozy)
 const ONLY = opt('only', '')
@@ -145,7 +147,29 @@ function parseState(html) {
   const header = h && typeof h === 'object'
     ? Object.fromEntries(['wr', 'n', 'pr', 'br', 'tier', 'rank', 'rankTotal'].map((k) => [k, deref(h[k])]))
     : {};
-  return { all: table('item'), boots: table('boots'), header };
+  // Zestawy startowe: wiersze ["1086_2003_2003", winrate, pickrate, gry]; powtórzone ID = liczba sztuk
+  const startSets = [];
+  const ss = deref(root.startSet);
+  if (Array.isArray(ss)) {
+    for (const r of ss) {
+      const row = deref(r);
+      if (!Array.isArray(row) || row.length < 4) continue;
+      const [key, wr, pr, games] = row.map(deref);
+      if (typeof key !== 'string' || [wr, pr, games].some((x) => typeof x !== 'number')) continue;
+      const ids = key.split('_').filter((x) => /^\d+$/.test(x));
+      if (ids.length) startSets.push({ ids, wr, pr, games });
+    }
+  }
+  return { all: table('item'), boots: table('boots'), header, startSets };
+}
+
+// Nazwa i cena itemu z Data Dragon (potrzebne też dla itemów startowych, których nie ma w puli buildów)
+function nameItem(id) {
+  const it = itemJson.data[id];
+  if (!it) return false;
+  itemNames[id] = it.name;
+  itemCost[id] = it.gold?.total ?? 0;
+  return true;
 }
 
 function parseBuildPage(html) {
@@ -175,7 +199,13 @@ function parseBuildPage(html) {
         itemStats[r.id] = { wr: r.wr, pr: r.pr, games: r.games, time: r.time };
       }
     }
+    // Zestawy startowe: tylko te, które gra co najmniej MIN_START_PCT% (reszta to rzadkie wyjątki);
+    // gdyby żaden nie przeszedł progu, zostaje najpopularniejszy
+    const sets = state.startSets.filter((s) => s.ids.every(nameItem));
+    let startSets = sets.filter((s) => s.pr >= MIN_START_PCT).slice(0, 8);
+    if (!startSets.length && sets.length) startSets = [sets[0]];
     return {
+      startSets,
       games: laneGames,
       winrate: typeof hd.wr === 'number' ? hd.wr : winrate,
       tier: typeof hd.tier === 'string' ? hd.tier : null,
@@ -240,6 +270,7 @@ async function processChampion(c) {
       items: p.items,
       boots: p.boots,
       itemStats: p.itemStats,
+      startSets: p.startSets ?? [],
       tier: p.tier, rank: p.rank, rankTotal: p.rankTotal, pickRate: p.pickRate, banRate: p.banRate,
     };
   }
