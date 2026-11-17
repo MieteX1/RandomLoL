@@ -68,6 +68,28 @@
   .facts ul { margin:0; padding-left:18px; color:var(--muted); font-size:.9rem; }
   .facts li { margin-bottom:4px; }
   .facts b { color:var(--text); font-weight:600; }
+  .tabs { display:flex; gap:4px; margin:0 0 18px; border-bottom:1px solid var(--line); }
+  .tabs button { background:none; border:0; border-bottom:2px solid transparent; margin-bottom:-1px; padding:10px 14px; color:var(--muted); font:inherit; font-weight:600; cursor:pointer; }
+  .tabs button:hover { color:var(--text); }
+  .tabs button.active { color:var(--gold); border-bottom-color:var(--gold); }
+  section[hidden] { display:none; }
+  .rule { display:flex; gap:16px; align-items:center; margin-top:20px; padding:16px; border:1px solid #7a2a2a; background:rgba(229,99,95,.07); border-radius:10px; }
+  .rule.good { border-color:#2f6b45; background:rgba(95,207,128,.07); }
+  .rule.info { border-color:var(--line); background:rgba(200,170,110,.06); }
+  .rule .rimg img { width:64px; height:64px; border-radius:10px; border:2px solid var(--gold); display:block; }
+  .rule .rimg { flex:none; position:relative; }
+  .rule .rtag { font-size:.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--gold); }
+  .rule h3 { margin:2px 0 4px; font-size:1.25rem; }
+  .rule h3 small { color:var(--muted); font-weight:400; font-size:.8rem; }
+  .rule p { margin:0; color:var(--muted); font-size:.88rem; }
+  .rule p b { color:var(--text); }
+  .rlist { margin-top:18px; }
+  .rlist h4 { margin:0 0 8px; font-size:.85rem; color:var(--gold); font-weight:600; }
+  .rlist h4 span { color:var(--muted); font-weight:400; }
+  .mini { display:flex; flex-wrap:wrap; gap:10px; }
+  .mini .it { width:72px; text-align:center; font-size:.65rem; line-height:1.3; color:var(--muted); }
+  .mini .it img { width:44px; height:44px; border-radius:8px; border:1px solid var(--line); display:block; margin:0 auto 3px; }
+  .mini .it.out img { border-color:#7a2a2a; opacity:.85; }
   .hist { margin-top:20px; color:var(--muted); font-size:.85rem; }
   .hist b { color:var(--text); font-weight:500; }
   .err { background:#3a1a1a; border:1px solid #7a2a2a; padding:16px; border-radius:8px; }
@@ -84,16 +106,22 @@
   <h1>Losowy Champ</h1>
   <p class="sub" id="sub"></p>
 
+  <nav class="tabs">
+    <button id="tabBtnBuild" class="active">🎲 Losowy build</button>
+    <button id="tabBtnChallenge">⚔️ Wyzwania</button>
+  </nav>
+
+  <section id="tabBuild">
   <div class="roles" id="roles"></div>
 
   <div class="opts">
     <span title="Championi rzadsi niż ten próg (na wybranej roli) nie będą losowani. Działa przy następnym losowaniu.">Min. pick rate championa:</span>
-    <input type="range" id="minChampPr" min="0" max="5" step="0.1" value="0">
-    <span class="val"><b id="minChampPrVal">0%</b><span class="cnt" id="champCnt"></span></span>
+    <input type="range" id="minChampPr" min="0" max="5" step="0.1" value="0.2" autocomplete="off">
+    <span class="val"><b id="minChampPrVal">0.2%</b><span class="cnt" id="champCnt"></span></span>
 
     <span title="Itemy rzadsze niż ten próg nie będą losowane (przy następnym losowaniu)">Min. pick rate itemu:</span>
-    <input type="range" id="minPr" min="0" max="5" step="0.1" value="0">
-    <span class="val"><b id="minPrVal">0%</b></span>
+    <input type="range" id="minPr" min="0" max="5" step="0.1" value="0.3" autocomplete="off">
+    <span class="val"><b id="minPrVal">0.3%</b></span>
 
     <span>Kolejność:</span>
     <select id="sortBy">
@@ -117,6 +145,30 @@
 
   <div id="out"></div>
   <div class="hist" id="hist"></div>
+  </section>
+
+  <section id="tabChallenge" hidden>
+    <div class="roles" id="chRoles"></div>
+
+    <div class="opts">
+      <span>Typ wyzwania:</span>
+      <select id="chType">
+        <option value="random">Losowe</option>
+        <option value="component">🚫 Zakazany składnik</option>
+        <option value="first">1️⃣ Obowiązkowy pierwszy item</option>
+        <option value="boots">👟 Bez butów do minuty…</option>
+        <option value="meta">🔥 Zakaz metowych itemów</option>
+      </select>
+    </div>
+    <div class="note" id="chNote">Wybierz rolę, aby wylosować championa i wyzwanie. Progi pick rate (championa i itemu) z zakładki „Losowy build” obowiązują też tutaj.</div>
+
+    <div class="actions">
+      <button class="primary" id="chRollAll" disabled>🎲 Losuj championa + wyzwanie</button>
+      <button id="chRollRule" disabled>🔁 Nowe wyzwanie, ten sam champion</button>
+    </div>
+
+    <div id="chOut"></div>
+  </section>
 </main>
 
 <script src="data.js"></script>
@@ -458,6 +510,213 @@
     refreshCounts();
   };
   $('sortBy').onchange = () => { if (current) render(); };
+})();
+</script>
+<script>
+(function () {
+  // ---------- zakładki (działają zawsze, także bez data.js) ----------
+  const tabs = {
+    build: [document.getElementById('tabBtnBuild'), document.getElementById('tabBuild')],
+    challenge: [document.getElementById('tabBtnChallenge'), document.getElementById('tabChallenge')],
+  };
+  Object.keys(tabs).forEach((k) => {
+    tabs[k][0].onclick = () => {
+      Object.keys(tabs).forEach((n) => { tabs[n][0].classList.toggle('active', n === k); tabs[n][1].hidden = n !== k; });
+    };
+  });
+
+  const D = window.LOL_DATA;
+  if (!D) return;
+
+  const $ = (id) => document.getElementById(id);
+  const IMG = 'https://ddragon.leagueoflegends.com/cdn/' + D.ddragonVersion + '/img/';
+  const ROLES = [['top', 'Top'], ['jungle', 'Jungle'], ['middle', 'Mid'], ['bottom', 'Bot / ADC'], ['support', 'Support']];
+  const fmt = (n) => Math.round(n).toLocaleString('pl-PL');
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const randInt = (n) => Math.floor(Math.random() * n);
+  const pick = (a) => a[randInt(a.length)];
+
+  // ---------- receptury itemów: z data.js (scrape.mjs), a gdy ich brak, z Data Dragon ----------
+  let recipes = D.recipes || null, recipesPromise = null;
+  function loadRecipes() {
+    if (recipes) return Promise.resolve(recipes);
+    if (!recipesPromise) {
+      recipesPromise = fetch('https://ddragon.leagueoflegends.com/cdn/' + D.ddragonVersion + '/data/en_US/item.json')
+        .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then((j) => {
+          const r = {};
+          Object.keys(j.data).forEach((id) => {
+            const it = j.data[id];
+            if (it.maps && it.maps['11']) r[id] = { n: it.name, c: (it.gold && it.gold.total) || 0, f: it.from || [], i: it.into || [], t: it.tags || [] };
+          });
+          recipes = r;
+          return r;
+        })
+        .catch(() => { recipesPromise = null; return null; });
+    }
+    return recipesPromise;
+  }
+
+  // wszystkie składniki (rekurencyjnie) danego itemu
+  function parts(R, id, acc) {
+    acc = acc || new Set();
+    const r = R[id];
+    if (!r) return acc;
+    r.f.forEach((c) => { if (!acc.has(c)) { acc.add(c); parts(R, c, acc); } });
+    return acc;
+  }
+
+  // ---------- dane championa i filtry z zakładki "Losowy build" ----------
+  const pool = (r) => Object.values(D.champions).filter((c) => c.lanes[r]);
+  const minChampPr = () => parseFloat($('minChampPr').value) || 0;
+  const minItemPr = () => parseFloat($('minPr').value) || 0;
+  const eligible = (r) => pool(r).filter((c) => minChampPr() <= 0 || (c.lanes[r].pickRate || 0) >= minChampPr());
+
+  let role = null, state = null, token = 0;
+  const rollAll = $('chRollAll'), rollRule = $('chRollRule');
+
+  const rolesEl = $('chRoles');
+  ROLES.forEach(([key, label]) => {
+    const b = document.createElement('button');
+    b.innerHTML = label + '<small>' + pool(key).length + ' champów</small>';
+    b.disabled = pool(key).length === 0;
+    b.onclick = () => {
+      role = key;
+      [...rolesEl.children].forEach((x) => x.classList.remove('active'));
+      b.classList.add('active');
+      rollAll.disabled = false;
+      rollRule.disabled = true;
+      $('chNote').textContent = 'Progi pick rate (championa i itemu) z zakładki „Losowy build” obowiązują też tutaj.';
+      rollChampion();
+    };
+    rolesEl.appendChild(b);
+  });
+
+  // ---------- generatory wyzwań; każdy zwraca { html } albo { err } ----------
+  const nm = (R, id) => (R && R[id] && R[id].n) || D.items[id] || id;
+  const iconUrl = (id) => IMG + 'item/' + id + '.png';
+
+  function chip(R, id, lane, out) {
+    const s = lane.itemStats && lane.itemStats[id];
+    return '<div class="it' + (out ? ' out' : '') + '" title="' + esc(nm(R, id)) + '"><img src="' + iconUrl(id) + '" alt="" loading="lazy">' +
+      esc(nm(R, id)) + (s ? '<br><span class="pr">' + s.pr + '%</span>' : '') + '</div>';
+  }
+  const byPr = (lane) => (a, b) => (((lane.itemStats || {})[b] || {}).pr || 0) - (((lane.itemStats || {})[a] || {}).pr || 0);
+  const ruleCard = (cls, tag, id, title, text) =>
+    '<div class="rule ' + cls + '">' + (id ? '<div class="rimg"><img src="' + iconUrl(id) + '" alt=""></div>' : '') +
+    '<div><div class="rtag">' + tag + '</div><h3>' + title + '</h3><p>' + text + '</p></div></div>';
+
+  const GENERATORS = {
+    // 🚫 nie kupujesz składnika osobno, ale gotowe itemy, w których on jest, już tak
+    component(champ, lane, R) {
+      if (!R) return { err: 'Nie udało się wczytać receptur itemów (brak internetu?). Uruchom ponownie <code>node scrape.mjs</code>, wtedy receptury będą już w data.js.' };
+      const items = lane.items;
+      const cnt = {};
+      items.forEach((id) => parts(R, id).forEach((c) => { cnt[c] = (cnt[c] || 0) + 1; }));
+      const all = Object.keys(cnt).filter((c) => {
+        const r = R[c];
+        return r && r.i.length && r.c <= 1300 && c !== '1001' && !r.t.some((t) => t === 'Boots' || t === 'Consumable' || t === 'Trinket');
+      });
+      if (!all.length) return { err: 'Dla tego championa nie znalazłem sensownego składnika do zakazania. Wylosuj ponownie.' };
+      // preferujemy składniki, które dotyczą kilku, ale nie większości itemów z puli
+      const pref = all.filter((c) => cnt[c] >= 2 && cnt[c] <= Math.ceil(items.length * 0.6));
+      const c = pick(pref.length ? pref : all);
+      const hit = items.filter((id) => parts(R, id).has(c)).sort(byPr(lane));
+      const free = items.filter((id) => !hit.includes(id)).sort(byPr(lane));
+      return {
+        html: ruleCard('', '🚫 Zakazany składnik', c, esc(nm(R, c)) + ' <small>' + fmt(R[c].c) + ' g</small>',
+          'Nie wolno Ci kupić go <b>jako osobnego przedmiotu</b>, ma nie leżeć w ekwipunku sam. ' +
+          'Gotowe itemy, które go zawierają, kupujesz normalnie, czyli w razie potrzeby cały item naraz, ' +
+          'po zebraniu pozostałych składników.') +
+          '<div class="rlist"><h4>Zawierają go <span>(' + hit.length + ' z puli championa, kupuj je od razu w całości)</span></h4><div class="mini">' +
+          hit.map((id) => chip(R, id, lane, true)).join('') + '</div></div>' +
+          '<div class="rlist"><h4>Bez ograniczeń <span>(' + free.length + ')</span></h4><div class="mini">' +
+          (free.length ? free.map((id) => chip(R, id, lane, false)).join('') : '<span class="meta">Wszystkie itemy z puli zawierają ten składnik.</span>') + '</div></div>',
+      };
+    },
+
+    // 1️⃣ pierwszy skompletowany item jest narzucony
+    first(champ, lane, R) {
+      const st = lane.itemStats || {};
+      const ok = lane.items.filter((id) => !st[id] || st[id].pr >= minItemPr());
+      if (!ok.length) return { err: 'Próg pick rate itemu wykluczył wszystkie itemy. Obniż go w zakładce „Losowy build”.' };
+      const id = pick(ok), s = st[id];
+      return {
+        html: ruleCard('good', '1️⃣ Obowiązkowy pierwszy item', id, esc(nm(R, id)) + (R && R[id] ? ' <small>' + fmt(R[id].c) + ' g</small>' : ''),
+          'Pierwszy <b>skompletowany</b> item w tej grze musi być właśnie ten, zanim skończysz jakikolwiek inny. Składniki innych itemów możesz kupować po drodze.' +
+          (s ? '<br>Lolalytics: <span class="' + (s.wr >= 50 ? 'wr-good' : 'wr-bad') + '">WR ' + s.wr + '%</span> · <span class="pr">PR ' + s.pr + '%</span>' +
+            (s.time != null ? ' · kupowany średnio ok. ' + Math.round(s.time) + ' min' : '') : '')),
+      };
+    },
+
+    // 👟 buty dopiero po minucie N
+    boots(champ, lane, R) {
+      const n = pick([10, 12, 14, 16, 18, 20, 22, 25]);
+      return { html: ruleCard('', '👟 Bez butów', null, 'Do ' + n + '. minuty gry', 'Nie wolno Ci kupić butów przed <b>' + n + '. minutą</b> gry (ani składnika Boots). Dopiero potem kupujesz je normalnie. Kasę wydajesz na resztę buildu.') };
+    },
+
+    // 🔥 zakaz dwóch najpopularniejszych itemów championa
+    meta(champ, lane, R) {
+      const st = lane.itemStats || {};
+      const top = lane.items.filter((id) => st[id]).sort(byPr(lane)).slice(0, 2);
+      if (top.length < 2) return { err: 'Za mało danych o itemach tego championa, żeby wskazać metowe.' };
+      return {
+        html: ruleCard('', '🔥 Zakaz metowych itemów', null, 'Bez najpopularniejszych',
+          'Nie wolno Ci kupić dwóch najczęściej kupowanych itemów tego championa na tej roli. Musisz zbudować coś niestandardowego.') +
+          '<div class="rlist"><h4>Zakazane</h4><div class="mini">' + top.map((id) => chip(R, id, lane, true)).join('') + '</div></div>',
+      };
+    },
+  };
+
+  // ---------- losowanie ----------
+  function newRule() {
+    const wanted = $('chType').value;
+    const order = wanted === 'random' ? ['component', 'first', 'boots', 'meta'].sort(() => Math.random() - 0.5) : [wanted];
+    return loadRecipes().then((R) => {
+      let res = null, used = null;
+      for (const t of order) {
+        res = GENERATORS[t](state.champ, state.lane, R);
+        if (!res.err) { used = t; break; }
+      }
+      state.res = res; state.type = used;
+    });
+  }
+
+  function rollChampion() {
+    const list = eligible(role);
+    if (!list.length) {
+      state = null;
+      rollRule.disabled = true;
+      $('chOut').innerHTML = '<div class="err">Żaden champion na tej roli nie ma pick rate ≥ <b>' + minChampPr() + '%</b>. Obniż próg championa w zakładce „Losowy build”.</div>';
+      return;
+    }
+    const champ = pick(list);
+    state = { champ, lane: champ.lanes[role] };
+    const my = ++token;
+    newRule().then(() => { if (my === token) { render(); rollRule.disabled = false; } });
+  }
+
+  function rerollRule() {
+    if (!state) return;
+    const my = ++token;
+    newRule().then(() => { if (my === token) render(); });
+  }
+
+  function render() {
+    const { champ, lane, res } = state;
+    const roleLabel = ROLES.filter((r) => r[0] === role)[0][1];
+    const url = 'https://lolalytics.com/lol/' + champ.slug + '/build/?lane=' + role;
+    $('chOut').innerHTML = '<div class="card"><div class="champ">' +
+      '<img src="' + IMG + 'champion/' + champ.id + '.png" alt="">' +
+      '<div><h2>' + esc(champ.name) + '</h2><div class="meta">' + roleLabel + ' · ' + fmt(lane.games) + ' gier' +
+      (lane.winrate ? ' · WR ' + lane.winrate + '%' : '') +
+      ' · <a href="' + url + '" target="_blank" rel="noopener">Lolalytics ↗</a></div></div></div>' +
+      (res.err ? '<div class="err" style="margin-top:20px">' + res.err + '</div>' : res.html) + '</div>';
+  }
+
+  rollAll.onclick = rollChampion;
+  rollRule.onclick = rerollRule;
+  $('chType').onchange = () => { if (state) rerollRule(); };
 })();
 </script>
 </body>

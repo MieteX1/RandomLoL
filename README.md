@@ -42,3 +42,16 @@ Skrypt parsuje HTML Lolalytics, więc zmiana układu strony może go zepsuć. Sk
 (`!`) przy championach, dla których nic nie znalazł. Najczęstsze poprawki są w funkcjach
 `parseLanePercents` i `parseBuildPage` w `scrape.mjs`.
 Championowie nowsi niż aktualna wersja Data Dragon mogą się nie pojawić.
+
+## Zakładka „Wyzwania”
+
+Losuje championa na wybranej roli i dokłada do niego zasadę gry:
+
+- 🚫 **Zakazany składnik**: nie kupujesz wylosowanego składnika (np. Long Sword) jako osobnego przedmiotu,
+  ale gotowe itemy, które go zawierają, kupujesz normalnie. Strona pokazuje, które itemy championa to dotyczy.
+- 1️⃣ **Obowiązkowy pierwszy item**: pierwszy skompletowany item jest narzucony.
+- 👟 **Bez butów do minuty N**.
+- 🔥 **Zakaz metowych itemów**: dwa najpopularniejsze itemy championa są zakazane.
+
+Receptury itemów (z czego się składają) skrypt zapisuje w `data.js`. Jeśli masz starszy `data.js`,
+strona pobierze je przy pierwszym wyzwaniu z Data Dragon, o ile jest internet.
