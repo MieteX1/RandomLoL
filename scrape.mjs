@@ -16,10 +16,10 @@ const opt = (name, def) => {
   const i = args.indexOf('--' + name);
   return i >= 0 ? args[i + 1] : def;
 };
-const MIN_GAMES = Number(opt('min-games', 500));
-const MIN_LANE_PCT = Number(opt('min-lane-pct', 2));
-const MIN_ITEM_PCT = Number(opt('min-item-pct', 0.3)); // item musi wystąpić w >= tylu % gier championa na tej roli
-const MIN_START_PCT = Number(opt('min-start-pct', 0.5)); // zestaw startowy musi być grany w >= tylu % gier
+const MIN_GAMES = Number(opt('min-games', 200));
+const MIN_LANE_PCT = Number(opt('min-lane-pct', 0));
+const MIN_ITEM_PCT = Number(opt('min-item-pct', 0)); // item musi wystąpić w >= tylu % gier championa na tej roli
+const MIN_START_PCT = Number(opt('min-start-pct', 0)); // zestaw startowy musi być grany w >= tylu % gier
 const DELAY = Number(opt('delay', 400));
 const DUMP = args.includes('--dump'); // zapisuje surowy HTML stron buildów do plików dump-*.html (do diagnozy)
 const ONLY = opt('only', '')
